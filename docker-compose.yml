@@ -1,0 +1,52 @@
+services:
+  root_ns:
+    build:
+      context: ./root_ns
+    networks:
+      dns_net:
+        ipv4_address: 10.0.0.2
+
+  tld_ns:
+    build:
+      context: ./tld_ns
+    networks:
+      dns_net:
+        ipv4_address: 10.0.0.3
+
+  authoritative_ns:
+    build:
+      context: ./authoritative_ns
+    networks:
+      dns_net:
+        ipv4_address: 10.0.0.4
+
+  resolver:
+    build:
+      context: ./resolver
+    depends_on:
+      - root_ns
+      - tld_ns
+      - authoritative_ns
+    networks:
+      dns_net:
+        ipv4_address: 10.0.0.5
+
+  client:
+    build:
+      context: ./client
+    depends_on:
+      - resolver
+    stdin_open: true
+    tty: true
+    networks:
+      dns_net:
+        ipv4_address: 10.0.0.6
+
+networks:
+  dns_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.0.0/24
+
+        

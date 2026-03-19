@@ -1,0 +1,13 @@
+{
+    "A": {
+        "facebook.com": "1.2.3.5",
+        "www.facebook.com": "1.2.3.5",
+        "api.facebook.com": "1.2.3.6"
+    },
+    "AAAA": {
+        "facebook.com": "2001:0db8:85a3:0000:0000:8a2e:1370:7335"
+    },
+    "MX": {
+        "facebook.com": "mail.facebook.com"
+    }
+}

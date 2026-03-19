@@ -1,0 +1,12 @@
+{
+    "A": {
+        "google.com": "1.2.3.4",
+        "mail.google.com": "1.2.3.10"
+    },
+    "AAAA": {
+        "google.com": "2001:0db8:85a3:0000:0000:8a2e:1370:7334"
+    },
+    "MX": {
+        "google.com": "mail.google.com"
+    }
+}
