@@ -8,7 +8,7 @@ import socket
 from common.protocol import build_packet, parse_packet, OK, NXDOMAIN
 import secrets
 
-def main(resolver_port, client_name):
+def main(resolver_ip, resolver_port, client_name):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(2)
 
@@ -37,7 +37,7 @@ def main(resolver_port, client_name):
 
         packet = build_packet(pkt_id, pkt_type, rcode, qtype, payload)
        
-        sock.sendto(packet, ("127.0.0.1", resolver_port))
+        sock.sendto(packet, (resolver_ip, resolver_port))
         
         try:
             data, _ = sock.recvfrom(512)
@@ -61,6 +61,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="DNS Client")
     parser.add_argument("--resolver", type=int, default=9999, help="Port resolver")
     parser.add_argument("--name", type=str, default="Client", help="Client name for prompts")
+    parser.add_argument("--resolver-ip", type=str, default="127.0.0.1")
     args = parser.parse_args()
-    main(args.resolver, args.name)
+    main(args.resolver_ip, args.resolver, args.name)
 

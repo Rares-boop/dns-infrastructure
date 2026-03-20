@@ -5,25 +5,13 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import socket
 import threading
+import argparse
 import sys
 from common.protocol import build_packet, parse_packet, QUERY, RESPONSE, REFERRAL, OK, NXDOMAIN
 
 PORT = 10000
 
-TLD_ZONES = {
-    "com":  6355,
-    "net":  6356,
-    "org":  6357,
-    "io":   6358,
-    "dev":  6359,
-    "ro":   6360,
-    "eu":   6361,
-    "uk":   6362,
-    "de":   6363,
-    "fr":   6364,
-}
-
-def handle_resolve(sock, addr, data):
+def handle_resolve(sock, addr, data, tld_zones):
     resolver_query = parse_packet(data)
     print(f"[ROOT NS] Received request from {addr}: {resolver_query}")
 
@@ -32,18 +20,19 @@ def handle_resolve(sock, addr, data):
         qtype = resolver_query["qtype"]
 
         tld = domain.split(".")[-1]
-        tld_ns_port = TLD_ZONES.get(tld)
+        result = tld_zones.get(tld)
 
-        if tld_ns_port:
-            print(f"[ROOT NS] Sending referral to {addr} for TLD .{tld} at port {tld_ns_port}")
-            referral_response = build_packet(resolver_query["id"], REFERRAL, OK, qtype, str(tld_ns_port))
+        if result:
+            tld_ip, tld_port = result
+            print(f"[ROOT NS] Sending referral to {addr} for TLD .{tld} at port {tld_port}")
+            referral_response = build_packet(resolver_query["id"], REFERRAL, OK, qtype, f"{tld_ip}:{tld_port}")
             sock.sendto(referral_response, addr)
         else:
             print(f"[ROOT NS] Sending NXDOMAIN to {addr} for TLD .{tld}")
             nxdomain_response = build_packet(resolver_query["id"], RESPONSE, NXDOMAIN, qtype, "")
             sock.sendto(nxdomain_response, addr)
 
-def start_server():
+def start_server(tld_zones):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
@@ -58,7 +47,7 @@ def start_server():
             try:
                 data, addr = sock.recvfrom(512)
                 
-                t = threading.Thread(target=handle_resolve, args=(sock, addr, data))
+                t = threading.Thread(target=handle_resolve, args=(sock, addr, data, tld_zones))
                 t.daemon = True 
                 t.start()
                 
@@ -73,6 +62,16 @@ def start_server():
         print("Root NS stopped...")
 
 if __name__ == "__main__":
-    start_server()
+    parser = argparse.ArgumentParser(description="Root NS Server")  
+    parser.add_argument("--tld-com-ip", type=str, default="127.0.0.1")
+    parser.add_argument("--tld-ro-ip", type=str, default="127.0.0.1")
+    args = parser.parse_args()
+
+    tld_zones = {
+        "com": (args.tld_com_ip, 6355),
+        "ro":  (args.tld_ro_ip, 6360),
+    }
+
+    start_server(tld_zones)
 
 

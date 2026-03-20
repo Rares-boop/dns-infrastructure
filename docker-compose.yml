@@ -1,46 +1,84 @@
 services:
   root_ns:
-    build:
-      context: ./root_ns
+    build: .
+    command: ["python", "root_ns/root_ns.py", "--tld-com-ip", "10.0.0.3", "--tld-ro-ip", "10.0.0.4"]
     networks:
       dns_net:
         ipv4_address: 10.0.0.2
 
-  tld_ns:
-    build:
-      context: ./tld_ns
+  tld_ns_com:
+    build: .
+    command: ["python", "tld_ns/tld_ns.py", "--port", "6355", "--name", "TLD_COM", "--zones", "tld_ns/zones_com.json"]
     networks:
       dns_net:
         ipv4_address: 10.0.0.3
 
-  authoritative_ns:
-    build:
-      context: ./authoritative_ns
+  tld_ns_ro:
+    build: .
+    command: ["python", "tld_ns/tld_ns.py", "--port", "6360", "--name", "TLD_RO", "--zones", "tld_ns/zones_ro.json"]
     networks:
       dns_net:
         ipv4_address: 10.0.0.4
 
-  resolver:
-    build:
-      context: ./resolver
-    depends_on:
-      - root_ns
-      - tld_ns
-      - authoritative_ns
+  auth_ns_google:
+    build: .
+    command: ["python", "authoritative_ns/authoritative_ns.py", "--port", "5454", "--name", "AUTH_GOOGLE", "--zones", "authoritative_ns/zones_google.json"]
     networks:
       dns_net:
         ipv4_address: 10.0.0.5
 
-  client:
-    build:
-      context: ./client
-    depends_on:
-      - resolver
+  auth_ns_facebook:
+    build: .
+    command: ["python", "authoritative_ns/authoritative_ns.py", "--port", "5455", "--name", "AUTH_FACEBOOK", "--zones", "authoritative_ns/zones_facebook.json"]
+    networks:
+      dns_net:
+        ipv4_address: 10.0.0.6
+
+  auth_ns_ase:
+    build: .
+    command: ["python", "authoritative_ns/authoritative_ns.py", "--port", "5457", "--name", "AUTH_ASE", "--zones", "authoritative_ns/zones_ase.json"]
+    networks:
+      dns_net:
+        ipv4_address: 10.0.0.7
+
+  auth_ns_unibuc:
+    build: .
+    command: ["python", "authoritative_ns/authoritative_ns.py", "--port", "5458", "--name", "AUTH_UNIBUC", "--zones", "authoritative_ns/zones_altii.json"]
+    networks:
+      dns_net:
+        ipv4_address: 10.0.0.8
+
+  resolver1:
+    build: .
+    command: ["python", "resolver/resolver.py", "--port", "9999", "--root-ip", "10.0.0.2", "--root", "10000", "--cache", "resolver/cache_resolver1.json"]
+    networks:
+      dns_net:
+        ipv4_address: 10.0.0.9
+
+  resolver2:
+    build: .
+    command: ["python", "resolver/resolver.py", "--port", "9998", "--root-ip", "10.0.0.2", "--root", "10000", "--cache", "resolver/cache_resolver2.json"]
+    networks:
+      dns_net:
+        ipv4_address: 10.0.0.10
+
+  client_alice:
+    build: .
+    command: ["tail", "-f", "/dev/null"]
     stdin_open: true
     tty: true
     networks:
       dns_net:
-        ipv4_address: 10.0.0.6
+        ipv4_address: 10.0.0.11
+
+  client_bob:
+    build: .
+    command: ["tail", "-f", "/dev/null"]
+    stdin_open: true
+    tty: true
+    networks:
+      dns_net:
+        ipv4_address: 10.0.0.12
 
 networks:
   dns_net:
@@ -48,5 +86,3 @@ networks:
     ipam:
       config:
         - subnet: 10.0.0.0/24
-
-        

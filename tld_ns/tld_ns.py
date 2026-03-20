@@ -18,20 +18,25 @@ def handle_resolve(sock, addr, data, AUTHORITATIVE_ZONES):
         qtype = resolver_query["qtype"]
 
         authoritative_server = ".".join(domain.split(".")[-2:])
-        auth_ns_port = AUTHORITATIVE_ZONES.get(authoritative_server)
+        auth_ns = AUTHORITATIVE_ZONES.get(authoritative_server)
 
-        if auth_ns_port:
-            print(f"[TLD NS] Sending referral to {addr} for Authoritative NS {authoritative_server} at port {auth_ns_port}")
-            referral_response = build_packet(resolver_query["id"], REFERRAL, OK, qtype, str(auth_ns_port))
+        if auth_ns:
+            print(f"[TLD NS] Sending referral to {addr} for {authoritative_server} at {auth_ns}")
+            referral_response = build_packet(resolver_query["id"], REFERRAL, OK, qtype, auth_ns)
             sock.sendto(referral_response, addr)
         else:
-            print(f"[TLD NS] Sending NXDOMAIN to {addr} for Authoritative NS {authoritative_server}")
+            print(f"[TLD NS] Sending NXDOMAIN to {addr} for {authoritative_server}")
             nxdomain_response = build_packet(resolver_query["id"], RESPONSE, NXDOMAIN, qtype, "")
             sock.sendto(nxdomain_response, addr)
 
 def start_server(port, name, zones_file):
     with open(zones_file, "r") as f:
-        authoritative_zones = json.load(f)
+        raw_zones = json.load(f)
+    
+    authoritative_zones = {
+        domain: f"{data['ip']}:{data['port']}"
+        for domain, data in raw_zones.items()
+    }
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -70,3 +75,4 @@ if __name__ == "__main__":
     PORT_TLD_NS = args.port
     TLD_NAME = args.name
     start_server(args.port, args.name, args.zones)
+

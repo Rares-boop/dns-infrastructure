@@ -13,6 +13,8 @@ import secrets
 
 CACHE_FILE = None
 TTL = 60
+
+HOST_ROOT_NS = None
 PORT_ROOT_NS = None
 
 def load_cache(cache_file):
@@ -56,23 +58,23 @@ def query_upstream(host, port, pkt_id, qtype, domain):
 def resolve_upstream(domain, qtype):
     # STEP 1: ask root NS
     print(f"[RESOLVER] Cache miss for {domain}. Asking Root NS...")
-    root_response = query_upstream("127.0.0.1", PORT_ROOT_NS, secrets.randbits(16), qtype, domain)
+    root_response = query_upstream(HOST_ROOT_NS, PORT_ROOT_NS, secrets.randbits(16), qtype, domain)
     if not root_response or root_response["type"] != REFERRAL:
         print(f"[RESOLVER] Root NS did not respond or did not send referral.")
         return None
 
     # STEP 2: ask TLD NS
-    tld_ns_port = int(root_response["payload"])
-    print(f"[RESOLVER] Root NS referred to TLD NS at port {tld_ns_port}. Asking TLD NS...")
-    tld_response = query_upstream("127.0.0.1", tld_ns_port, secrets.randbits(16), qtype, domain)
+    tld_ip, tld_port = root_response["payload"].split(":")
+    print(f"[RESOLVER] Root NS referred to TLD NS at {tld_ip} at port {tld_port}. Asking TLD NS...")
+    tld_response = query_upstream(tld_ip, int(tld_port), secrets.randbits(16), qtype, domain)
     if not tld_response or tld_response["type"] != REFERRAL:
         print(f"[RESOLVER] TLD NS did not respond or did not send referral.")
         return None
 
     # STEP 3: ask Authoritative NS
-    auth_ns_port = int(tld_response["payload"])
-    print(f"[RESOLVER] TLD NS referred to Auth NS at port {auth_ns_port}. Asking Auth NS...")
-    auth_response = query_upstream("127.0.0.1", auth_ns_port, secrets.randbits(16), qtype, domain)
+    auth_ip, auth_port = tld_response["payload"].split(":")
+    print(f"[RESOLVER] TLD NS referred to Auth NS at {auth_ip} at port {auth_port}. Asking Auth NS...")
+    auth_response = query_upstream(auth_ip, int(auth_port), secrets.randbits(16), qtype, domain)
     if not auth_response or auth_response["rcode"] != OK:
         print(f"[RESOLVER] Auth NS did not respond or returned NXDOMAIN.")
         return None
@@ -156,9 +158,11 @@ def start_server(port):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=9999)
+    parser.add_argument("--root-ip", type=str, default="127.0.0.1")
     parser.add_argument("--root", type=int, default=10000)
     parser.add_argument("--cache", type=str, default="cache.json")
     args = parser.parse_args()
+    HOST_ROOT_NS = args.root_ip
     PORT_ROOT_NS = args.root
     CACHE_FILE = args.cache
     CACHE_A_RECORD, CACHE_AAAA_RECORD, CACHE_MX_RECORD = load_cache(CACHE_FILE)

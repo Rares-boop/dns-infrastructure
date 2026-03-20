@@ -5,3 +5,5 @@ __pycache__/
 .env
 *.log
 .DS_Store
+resolver/cache_resolver1.json
+resolver/cache_resolver2.json
